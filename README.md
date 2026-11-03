@@ -4,11 +4,12 @@ This guide explains how to build Lua plugins for PrusaSlicer 3.
 It is written for plugin developers, so you do not need to know the PrusaSlicer C++ codebase.
 
 The API currently lets a plugin add geometry to the active project, change some print settings, read printer details, and add custom G-code at chosen layer heights.
-A plugin runs when the user picks its command from the Plugins menu.
+Project plugins run from the Plugins menu.
+Print-mode plugins provide reversible configuration overrides through the Print modes interface.
 
 ## Version covered
 
-This reference was checked against PrusaSlicer `3.0.0-alpha11`, tag `version_3.0.0-alpha11`, commit `6f510128d7`.
+This reference was checked against PrusaSlicer [`3.0.0-alpha13`](https://github.com/prusa3d/PrusaSlicer/releases/tag/version_3.0.0-alpha13), tag `version_3.0.0-alpha13`, commit `ff3d6677cf`.
 The plugin API is new and still changing.
 The [current limitations](known-limitations.md) page lists behavior that is especially likely to change.
 
@@ -40,7 +41,8 @@ A project plugin can:
 
 ## What it cannot do
 
-The current API is a small, one-shot project automation API.
+Project plugins provide one-shot project automation.
+Print-mode plugins calculate configuration overrides and may be evaluated again when settings change.
 It is not a general application extension system.
 
 There are no Lua callbacks for project load, save, slicing, selection changes, timers, or shutdown.
@@ -53,7 +55,7 @@ There is no background execution, network API, general file API, persistent stor
 - Lua arrays start at `1`.
 - Tool and material indices passed to preset methods start at `0`.
 - Methods use `:` and fields use `.`.
-- `api` and `VolumeType` are globals provided by PrusaSlicer.
+- For project plugins, `api` and `VolumeType` are globals provided by PrusaSlicer.
   Do not call `require("api")`.
 
 Here is a small example:

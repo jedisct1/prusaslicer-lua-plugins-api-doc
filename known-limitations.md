@@ -1,70 +1,32 @@
 # Current limitations
 
-This page describes behavior confirmed in PrusaSlicer `3.0.0-alpha11` at commit `6f510128d7`.
+This page describes behavior confirmed in PrusaSlicer `3.0.0-alpha13` at commit `ff3d6677cf`.
 These are current implementation limits, not recommended API design.
-
-## Numeric parameters are swapped
-
-The `float` and `int` dialog controls are connected to the wrong validators.
-
-- `type = "float"` rounds the entered value to a whole number and passes a Lua integer.
-- `type = "int"` accepts a decimal and passes a Lua float.
-
-For example, entering `1.5` in a `float` field produces `2`.
-Entering `2.5` in an `int` field produces `2.5`.
-
-This is tracked upstream as [PrusaSlicer issue #15611](https://github.com/prusa3d/PrusaSlicer/issues/15611) and has been acknowledged as internal issue SPE-4074.
-
-Do not silently swap the declared types in a published plugin.
-That would break its meaning after PrusaSlicer fixes the bug.
-For alpha11 testing, validate values inside `execute` and explain the restriction to testers.
-
-## `emboss_text` ignores `depth`
-
-`api.emboss_text` accepts a `depth` field, but alpha11 does not read it.
-Generated text is always 1 mm deep.
-
-This input:
-
-```lua
-local text = api.emboss_text {
-    font = api.get_default_font(),
-    text = "Hello",
-    depth = 3
-}
-```
-
-still produces 1 mm depth.
-The `line_height` and `per_glyph` fields do work.
 
 ## Primitive mesh bounds are stale
 
 Primitive constructors create mesh geometry without updating the mesh's cached bounding box.
-In alpha11, `mesh:bounds()` can therefore report all zeroes for a mesh returned by functions such as `api.make_cube` or `api.make_cylinder`.
+`mesh:bounds()` can therefore report all zeroes for a mesh returned by functions such as `api.make_cube` or `api.make_cylinder`.
 
 `Mesh:translate` changes vertices but does not refresh that cache either.
 
-Do not use primitive `Mesh:bounds()` values for layout in this version.
+Do not use primitive `Mesh:bounds()` values for layout.
 Keep the dimensions you passed to the constructor, or use bounds from a successfully loaded or generated asset whose mesh statistics are populated.
 
-## Compatibility fields are not enforced
+## API version requirements are not enforced
 
-PrusaSlicer parses these manifest values but does not currently compare them with the running application or API:
-
-- `min_slicer_version`
-- `max_slicer_version`
-- Values inside `required_apis`
-
+PrusaSlicer enforces `min_slicer_version` and `max_slicer_version` during bundle discovery.
+It parses `required_apis` names and versions, but does not compare the required API versions with the implementation.
 Unknown API names and malformed versions still make a manifest invalid.
-Valid but incompatible version ranges do not stop loading in alpha11.
 
 ## Some configuration values are opaque
 
 `ConfigBox:value` directly returns booleans, integers, optional integers, ordinary numbers, and strings.
 It can also return 2D vector, percentage, and float-or-percentage values.
 
-Alpha11 does not register public Lua fields or conversion methods for those three complex types.
-Lua receives them as opaque values with no useful documented fields or conversions.
+The project API does not register public Lua fields or conversion methods for the 2D vector and percentage types.
+Those two types remain opaque.
+Float-or-percentage values support `is_percentage` and `get_abs_value(ratio_over)`.
 
 There is also no API to list a ConfigBox's keys or learn their types.
 
@@ -83,17 +45,9 @@ The object and volume parameter paths log the same misleading `not found` messag
 
 Read a setting back when its return type is usable and the result matters.
 
-## Several commands without a menu can crash registration
-
-The `menu` field is optional in the metadata parser.
-When two or more commands omit it, alpha11 groups their empty menu paths as a conflict and then tries to edit the last part of an empty path.
-This is an invalid memory access and can crash PrusaSlicer.
-
-Give every command a non-empty `menu` value in this release.
-
 ## Top-level runtime errors may not stop a command
 
-During discovery, alpha11 logs a top-level runtime error and then still checks the globals created before that error.
+During discovery, PrusaSlicer logs a top-level runtime error and then still checks the globals created before that error.
 If valid `info` and `execute` values already exist, the command can still appear in the menu.
 During a run, it can also continue to look up and call `execute` after a top-level error.
 
@@ -117,8 +71,9 @@ Compare the returned font's `name` when an exact font matters.
 ## Installing an author key is manual
 
 The GUI ZIP installer requires an author public key in `authorized_authors/<author>.pem`.
-Alpha11 has no UI or CLI command that imports that public key.
+For local ZIP installation, PrusaSlicer has no UI or CLI command that imports that public key.
 The developer or tester must place it there manually.
+Marketplace installation stores a versioned bundle key automatically and uses a separate key lookup.
 
 ## Installation replacement is not transactional
 
@@ -129,6 +84,8 @@ Keep the source bundle and release ZIP somewhere outside the user plugin directo
 
 ## No management or background APIs
 
-Alpha11 has no plugin uninstall command, enable or disable switch, dependency system, automatic updater, background task API, event callbacks, custom UI API, or persistent plugin storage.
+There is no plugin uninstall CLI command, general enable or disable switch, dependency system, background task API, event callbacks, custom UI API, or persistent plugin storage.
+The Plugin Marketplace can install updates and uninstall user bundles.
+Application-bundled plugins are protected from removal.
 
 Remove a development bundle manually, then choose **Rescan Plugins**.

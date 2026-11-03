@@ -15,7 +15,10 @@ com.example.calibration/
 ```
 
 One bundle may register several Plugins menu commands.
-Every `.lua` file that defines a valid global `info` table and `execute` function becomes a command.
+Every `.lua` file that defines a valid global `info` table and `execute` function becomes a plugin.
+`project.plugin` entries appear in the Plugins menu.
+When `menu` is omitted, the full command ID is used as the menu label.
+Bundles can also contain `print.print_mode` entries that supply print configuration overrides.
 A Lua file without those globals can be used as a helper module.
 
 Keep command entry files at the bundle root when possible.
@@ -28,7 +31,7 @@ Relative modules and assets are resolved from the entry file's directory, not fr
   "id": "com.example.calibration",
   "name": "Calibration helpers",
   "version": "1.2.0",
-  "min_slicer_version": "3.0.0",
+  "min_slicer_version": "3.0.0-alpha13",
   "max_slicer_version": "3.1.0",
   "author": "example-developer",
   "license": "MIT",
@@ -44,26 +47,27 @@ Relative modules and assets are resolved from the entry file's directory, not fr
 
 ## Fields
 
-| Field                | Required | Type                    | Meaning                                                              |
-| -------------------- | -------: | ----------------------- | -------------------------------------------------------------------- |
-| `id`                 |      Yes | string                  | Stable ID for the whole bundle.                                      |
-| `name`               |      Yes | string                  | Human-readable bundle name.                                          |
-| `version`            |      Yes | semantic version string | Version of your bundle.                                              |
-| `min_slicer_version` |      Yes | semantic version string | Oldest PrusaSlicer version declared as supported.                    |
-| `max_slicer_version` |       No | semantic version string | Newest PrusaSlicer version declared as supported.                    |
-| `author`             |      Yes | string                  | Author ID. It also selects the public key used by the ZIP installer. |
-| `license`            |      Yes | string                  | License identifier. An SPDX identifier is recommended.               |
-| `description`        |       No | string                  | Short description of the bundle.                                     |
-| `category`           |       No | string                  | Category metadata. It does not create menu nesting.                  |
-| `web`                |       No | string                  | Project website.                                                     |
-| `repo`               |       No | string                  | Source repository.                                                   |
-| `required_apis`      |      Yes | object                  | Required plugin API names and versions.                              |
+| Field                |                 Required | Type                    | Meaning                                                                   |
+| -------------------- | -----------------------: | ----------------------- | ------------------------------------------------------------------------- |
+| `id`                 |                      Yes | string                  | Stable ID for the whole bundle.                                           |
+| `name`               |                      Yes | string                  | Human-readable bundle name.                                               |
+| `version`            |                      Yes | semantic version string | Version of your bundle.                                                   |
+| `min_slicer_version` |                      Yes | semantic version string | Oldest PrusaSlicer version declared as supported.                         |
+| `max_slicer_version` |                       No | semantic version string | Newest PrusaSlicer version declared as supported.                         |
+| `author`             |                      Yes | string                  | Author ID. It also selects the public key used by the ZIP installer.      |
+| `license`            |                      Yes | string                  | License identifier. An SPDX identifier is recommended.                    |
+| `description`        |                       No | string                  | Short description of the bundle.                                          |
+| `category`           |                       No | string                  | Category metadata. It does not create menu nesting.                       |
+| `web`                |                       No | string                  | Project website.                                                          |
+| `repo`               |                       No | string                  | Source repository.                                                        |
+| `required_apis`      | Unless fallback supplied | object                  | Required plugin API names and versions.                                   |
+| `plugin_api_version` |   If map absent or empty | semantic version string | Fallback project API requirement when `required_apis` is absent or empty. |
 
 All required fields must have exactly the expected JSON type.
 Malformed fields can stop the whole bundle from loading.
 
-The bundle name, version, license, description, category, website, and repository are parsed metadata in alpha11.
-They are not shown in the Plugins menu or exposed to Lua.
+Bundle metadata is separate from individual Lua command metadata.
+The bundle ID and version also identify the bundle to the marketplace and uninstaller.
 Menu labels and command dialog titles come from each Lua file's `info` table.
 
 Extra fields are currently ignored, but do not use that as a storage mechanism.
@@ -92,13 +96,17 @@ The GUI installer uses the ID as the destination directory name and replaces the
 Use semantic versions such as `1.0.0` or `1.2.0-beta.1`.
 Invalid version strings make the manifest fail to parse.
 
-In 3.0.0-alpha11, compatibility versions are metadata only.
-PrusaSlicer parses `version`, `min_slicer_version`, `max_slicer_version`, and API versions, but it does not compare them with the running version during scan or installation.
-Set honest values anyway so your bundle is ready when enforcement is added.
+PrusaSlicer skips bundles during scanning when the running version is below `min_slicer_version` or above `max_slicer_version`.
+The endpoints are inclusive.
+Use a prerelease minimum such as `3.0.0-alpha13` for this release: `3.0.0` sorts after all of its alpha versions and would prevent the bundle from loading.
+
+These checks happen during scanning, so successful ZIP installation does not guarantee that a bundle is compatible or that its commands will appear.
+The initializer fills `min_slicer_version` with the version of the PrusaSlicer executable used to create the bundle.
 
 ## Required APIs
 
-The only recognized API name is currently `project.plugin`:
+The recognized API names are `project.plugin` and `print.print_mode`.
+Declare the APIs your bundle uses:
 
 ```json
 "required_apis": {
@@ -106,12 +114,26 @@ The only recognized API name is currently `project.plugin`:
 }
 ```
 
+For a print mode bundle, use:
+
+```json
+"required_apis": {
+  "print.print_mode": "1.0.0"
+}
+```
+
+A bundle using both APIs can include both keys.
 An unknown API name makes the manifest invalid.
-The current API version value is parsed but not enforced.
+The current API version values are parsed but not enforced.
+
+Marketplace manifests may instead contain `"plugin_api_version": "1.0.0"`.
+When `required_apis` is missing or empty, that value supplies the `project.plugin` requirement.
+It does not declare `print.print_mode`; use an explicit `required_apis` map for a print mode bundle.
+A missing or empty map without a nonempty fallback makes the manifest invalid.
 
 ## Author IDs and signing
 
-The author value is more than display text during ZIP installation.
+The author value is more than display text during local ZIP installation.
 PrusaSlicer looks for this exact file:
 
 ```text
@@ -119,6 +141,7 @@ PrusaSlicer looks for this exact file:
 ```
 
 For example, `"author": "example-developer"` uses `example-developer.pem`.
+Marketplace installation obtains a key through the marketplace verification step and stores it as `<bundle id>@<version>.pem` in the same directory.
 Author IDs created by the CLI may contain letters, digits, `.`, `-`, and `_`.
 
 You do not need a key while loading an unpacked bundle from the user plugin folder.
@@ -131,6 +154,8 @@ PrusaSlicer scans built-in bundles first, then user bundles.
 Only direct child directories of those plugin roots are treated as bundles.
 A directory counts as a bundle when it has a root-level `manifest.json`.
 
+If an already scanned bundle has the same bundle ID and an equal or newer version, the later bundle is skipped.
+A later bundle with a higher version can be scanned, but it does not replace commands that already registered the same full ID.
 If two commands have the same full ID, the first one wins.
 A user plugin therefore cannot replace a built-in command by reusing its ID.
 The built-in root is scanned before the user root, but ordering among duplicate IDs inside the same root depends on directory iteration.

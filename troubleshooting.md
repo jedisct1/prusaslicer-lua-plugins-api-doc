@@ -9,13 +9,18 @@ Check these items in order:
 1. The bundle is a direct child of the user plugin folder.
 2. `manifest.json` is at the bundle root.
 3. The manifest is valid JSON and contains every required field.
-4. `required_apis` contains only `project.plugin`.
+4. `required_apis` names the APIs used by the bundle: `project.plugin`, `print.print_mode`, or both.
 5. The command file ends in `.lua`.
 6. The file sets a global `info` table.
-7. `info.type` is exactly `project.plugin`.
+7. `info.type` is `project.plugin` for a Plugins menu command.
+   A `print.print_mode` plugin appears in Print modes instead.
 8. The file defines a global `execute` function.
 9. Top-level code does not use `api` or `require`.
 10. You chose **Plugins > Rescan Plugins** after editing.
+
+Check `min_slicer_version` and `max_slicer_version` too.
+They are enforced.
+For alpha13, a minimum of `3.0.0` is too new; use `3.0.0-alpha13` for a bundle targeting this release.
 
 Then inspect the PrusaSlicer log.
 Discovery errors are logged, not shown in a plugin dialog.
@@ -98,7 +103,7 @@ That looks for a local `api.lua` file.
 ## A runtime error does not appear in the dialog
 
 Errors raised by `execute` are written to the PrusaSlicer log.
-There is no in-app plugin console in alpha11.
+There is no in-app plugin console.
 
 Start the application from a terminal while developing and use `print` for small diagnostics.
 Remove temporary diagnostics when the plugin is ready.
@@ -113,26 +118,13 @@ If the command changed the project before it failed, those earlier changes remai
 Use the Execute Plugin undo entry to restore the previous state.
 Validate parameters and load required assets before the first project change when possible.
 
-## A `float` value becomes an integer
-
-Alpha11 connects the `float` parameter to the integer validator and the `int` parameter to the decimal validator.
-See [Numeric parameters are swapped](known-limitations.md#numeric-parameters-are-swapped).
-
-This is a known PrusaSlicer defect, not Lua number conversion in your plugin.
-
 ## `mesh:bounds()` returns zeroes
 
-Primitive constructors do not update cached mesh statistics in alpha11.
+Primitive constructors do not update cached mesh statistics.
 `Mesh:translate` also leaves that cache stale.
 
 Keep known primitive dimensions yourself.
-Do not use primitive bounds for placement in this version.
-
-## Text depth stays at 1 mm
-
-Alpha11 accepts but ignores the `depth` field in `api.emboss_text`.
-SVG depth works.
-See [`emboss_text` ignores `depth`](known-limitations.md#emboss_text-ignores-depth).
+Do not use primitive bounds for placement.
 
 ## A setting does not change
 
@@ -181,6 +173,7 @@ Font lists vary by computer.
 ## A user plugin does not replace a built-in plugin
 
 Built-in bundles are scanned before user bundles.
+A later bundle with the same ID and an equal or older version is skipped.
 When two commands have the same full ID, the first registered command wins.
 
 Choose a unique bundle ID and local command ID.
@@ -222,4 +215,4 @@ There is no persistent plugin settings API.
 - [Runtime and sandbox](runtime-and-sandbox.md) for discovery and execution rules.
 - [Commands and parameters](commands-and-parameters.md) for exact metadata shapes.
 - [Configuration and hardware](api/configuration-and-hardware.md) for setter limits and indexing.
-- [Current limitations](known-limitations.md) for known alpha11 defects.
+- [Current limitations](known-limitations.md) for remaining limitations.

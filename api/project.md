@@ -29,17 +29,17 @@ The definition must contain a main `mesh` and may contain transforms, settings, 
 }
 ```
 
-| Field | Required | Meaning |
-|---|---:|---|
-| `mesh` | Yes | Main solid mesh. |
-| `translate` | No | Main volume offset in millimeters. Missing axes default to 0. |
-| `rotate` | No | Main volume rotation in degrees. Missing axes default to 0. |
-| `params` | No | Settings applied to the main volume. |
-| `object_params` | No | Settings applied to the whole object. |
-| `other_volumes` | No | Extra solid, negative, modifier, or support volumes. |
+| Field           | Required | Meaning                                                       |
+| --------------- | -------: | ------------------------------------------------------------- |
+| `mesh`          |      Yes | Main solid mesh.                                              |
+| `translate`     |       No | Main volume offset in millimeters. Missing axes default to 0. |
+| `rotate`        |       No | Main volume rotation in degrees. Missing axes default to 0.   |
+| `params`        |       No | Settings applied to the main volume.                          |
+| `object_params` |       No | Settings applied to the whole object.                         |
+| `other_volumes` |       No | Extra solid, negative, modifier, or support volumes.          |
 
 The main mesh is always created as a solid model part.
-A top-level `type` field is ignored in alpha11.
+A top-level `type` field is ignored.
 
 If a bed is selected, PrusaSlicer centers the new object's exact X/Y bounding box on that bed.
 Only printable solid model-part volumes contribute to this box.
@@ -124,14 +124,14 @@ They do not move every volume in the object as a group.
 `VolumeType` is a global read-only enum table.
 Use its names instead of numeric values.
 
-| Value | Meaning |
-|---|---|
-| `VolumeType.Solid` | Printable solid model part. |
-| `VolumeType.Negative` | Subtracts intersecting geometry. |
-| `VolumeType.Modifier` | Changes settings in the intersecting region. |
-| `VolumeType.SupportBlocker` | Prevents support generation in the region. |
-| `VolumeType.SupportEnforcer` | Requests support generation in the region. |
-| `VolumeType.Invalid` | Invalid or uninitialized role. Do not use it in a definition. |
+| Value                        | Meaning                                                       |
+| ---------------------------- | ------------------------------------------------------------- |
+| `VolumeType.Solid`           | Printable solid model part.                                   |
+| `VolumeType.Negative`        | Subtracts intersecting geometry.                              |
+| `VolumeType.Modifier`        | Changes settings in the intersecting region.                  |
+| `VolumeType.SupportBlocker`  | Prevents support generation in the region.                    |
+| `VolumeType.SupportEnforcer` | Requests support generation in the region.                    |
+| `VolumeType.Invalid`         | Invalid or uninitialized role. Do not use it in a definition. |
 
 Numeric enum values are not part of the documented contract.
 
@@ -209,11 +209,11 @@ api.project:insert_layer_custom_gcode(bed, z_depth, gcode)
 
 Appends one custom G-code entry to `bed`.
 
-| Parameter | Type | Meaning |
-|---|---|---|
-| `bed` | `BedInstRef` | Target bed. |
-| `z_depth` | number | Print Z height in millimeters. |
-| `gcode` | string | Raw G-code text. |
+| Parameter | Type         | Meaning                        |
+| --------- | ------------ | ------------------------------ |
+| `bed`     | `BedInstRef` | Target bed.                    |
+| `z_depth` | number       | Print Z height in millimeters. |
+| `gcode`   | string       | Raw G-code text.               |
 
 The entry uses extruder number 1.
 The method appends without sorting the existing list, so add entries in ascending Z order.

@@ -16,13 +16,11 @@ Put them in a bundle with a valid [manifest](bundles-and-manifests.md).
   - [Change selected presets](#change-selected-presets)
   - [Add temperature changes by height](#add-temperature-changes-by-height)
   - [SVG logo as a support blocker](#svg-logo-as-a-support-blocker)
+  - [Print mode with configuration inputs](#print-mode-with-configuration-inputs)
 
 ## Parameterized box
 
-This example uses all four parameter declarations and adds one object.
-
-PrusaSlicer 3.0.0-alpha11 has swapped `int` and `float` controls.
-The declarations below describe the intended API behavior.
+This example uses string, float, integer, and boolean parameters and adds one object.
 
 ```lua
 info = {
@@ -130,16 +128,18 @@ info = {
     title = "Add labeled bracket",
     menu = "Examples/Labeled bracket",
     params = {
-        {name = "label", label = "Label", type = "string", default = "LEFT"}
+        {name = "label", label = "Label", type = "string", default = "LEFT"},
+        {name = "font", label = "Font", type = "font"}
     }
 }
 
 function execute(opts)
     local bracket = api.load_stl("assets/bracket.stl")
     local label = api.emboss_text {
-        font = api.get_default_font(),
+        font = opts.font,
         text = opts.label,
-        line_height = 6
+        line_height = 6,
+        depth = 1.5
     }
 
     api.project:add_object {
@@ -156,7 +156,8 @@ function execute(opts)
 end
 ```
 
-Text depth is fixed at 1 mm in alpha11.
+Text depth defaults to 1 mm.
+Set `depth` in the `api.emboss_text` options to change it.
 Adjust the translation so the negative volume intersects the model surface.
 
 ## Reusable helper module
@@ -353,3 +354,32 @@ end
 ```
 
 Both asset paths are relative to this command file and must remain inside its sandbox.
+
+## Print mode with configuration inputs
+
+This example belongs to a bundle with `"print.print_mode": "1.0.0"` in `required_apis`.
+It returns overrides without changing the project directly.
+
+```lua
+info = {
+    id = "gentle_supports",
+    type = "print.print_mode",
+    title = "Gentle supports",
+    params = {
+        {name = "factor", label = "Speed factor", type = "float", default = 0.8}
+    }
+}
+
+function execute(opts)
+    assert(opts.factor > 0 and opts.factor <= 1, "Speed factor must be in (0, 1]")
+
+    return {
+        support_material = "everywhere",
+        support_material_speed = api.config:value("support_material_speed") * opts.factor
+    }
+end
+```
+
+A print mode must return a table.
+Its runtime exposes `api.config:value` instead of `api.project` and the geometry helpers.
+See [Print modes](commands-and-parameters.md#print-modes) for compatibility conditions, per-slot overrides, and parameter rules.

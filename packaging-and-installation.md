@@ -16,7 +16,9 @@ Rescan after manifest or `info` changes and after adding or removing files.
 PrusaSlicer rereads existing execution code when you click Run.
 
 To remove a development bundle, delete its directory and rescan.
-Alpha11 has no enable, disable, or uninstall command.
+The Plugin Marketplace also supports uninstalling user bundles.
+App bundled plugins are protected from uninstalling.
+There is no per-plugin enable or disable switch.
 
 ## Create a starter bundle
 
@@ -63,7 +65,7 @@ PrusaSlicer plugin keygen \
 ```
 
 The option names and generated files are correct.
-In alpha11, the CLI help text accidentally describes `--public` as private and `--private` as public.
+The CLI help text accidentally describes `--public` as private and `--private` as public.
 
 Keep the private key outside the bundle and user plugin directory.
 Do not commit or distribute it.
@@ -94,7 +96,7 @@ copy the public key as:
 authorized_authors/example-developer.pem
 ```
 
-Alpha11 has no public-key import UI or CLI command.
+Local ZIP installation has no public-key import UI or CLI command.
 Open the user plugin folder, move to its parent user data directory, and place the PEM in `authorized_authors` manually.
 
 Never place the private key there.
@@ -166,6 +168,7 @@ On success, it installs the bundle at:
 ```
 
 It then rescans plugins.
+The scan checks the manifest's minimum and maximum Slicer versions; an incompatible bundle can install successfully and still be skipped.
 
 The success notification confirms signature verification and extraction.
 It does not confirm that every Lua command registered successfully.
@@ -189,4 +192,15 @@ It does not grant extra API permissions.
 It also does not protect a directory after installation from local edits.
 Normal directory rescans do not recheck signatures.
 
-There is no current store submission, dependency, update feed, or automatic update API in alpha11.
+## Plugin Marketplace
+
+Choose **Plugins > Plugin Marketplace** to open the integrated marketplace.
+The application can install marketplace bundles and uninstall installed user bundles.
+App bundled plugins are protected from uninstalling.
+
+For a marketplace installation, PrusaSlicer first requests verification metadata and the public key, then downloads the ZIP and applies the same signature and checksum verification used by the local installer.
+It stores the key in `authorized_authors/<bundle id>@<version>.pem`; manually copying an author key is not part of that flow.
+Marketplace downloads have a 100 MiB size limit.
+
+These operations belong to the application.
+They do not give Lua plugins networking, marketplace publishing, or plugin dependency APIs.

@@ -2,7 +2,7 @@
 
 This tutorial creates a plugin that adds a 20 mm cube to the active project.
 
-You need PrusaSlicer 3, a text editor, and basic familiarity with Lua tables and functions.
+You need PrusaSlicer 3.0.0-alpha13, a text editor, and basic familiarity with Lua tables and functions.
 You do not need a compiler, an SDK, or a PrusaSlicer source checkout.
 
 ## 1. Open the user plugin folder
@@ -36,7 +36,7 @@ Create `com.example.first-plugin/manifest.json`:
   "id": "com.example.first-plugin",
   "name": "My first plugin",
   "version": "1.0.0",
-  "min_slicer_version": "3.0.0",
+  "min_slicer_version": "3.0.0-alpha13",
   "author": "example-developer",
   "license": "MIT",
   "description": "Small examples for learning the Lua API",
@@ -48,6 +48,9 @@ Create `com.example.first-plugin/manifest.json`:
 
 The bundle ID should use reverse domain name form so it stays unique.
 If you do not own a domain, use a stable namespace that identifies you or your organization.
+
+PrusaSlicer enforces minimum and maximum Slicer versions.
+The final release version `3.0.0` sorts after `3.0.0-alpha13`, so using it as the minimum would skip this bundle in alpha13.
 
 See [Bundles and manifests](bundles-and-manifests.md) for every field.
 
@@ -113,7 +116,7 @@ info = {
 }
 
 function execute(opts)
-    local size = math.floor(opts.size)
+    local size = opts.size
     assert(size > 0, "Size must be greater than zero")
 
     api.project:add_object {
@@ -125,8 +128,7 @@ end
 Rescan again after changing metadata or adding files.
 The dialog now passes a `size` value in `opts`.
 
-PrusaSlicer 3.0.0-alpha11 has a known numeric dialog bug: `int` accepts decimal values and `float` rounds to an integer.
-Read [Numeric parameters are swapped](known-limitations.md#numeric-parameters-are-swapped) before designing a parameter form.
+`int` uses an integer control and `float` uses a decimal control.
 
 ## 6. Keep top-level code simple
 
@@ -165,6 +167,7 @@ PrusaSlicer plugin init -d ./plugins com.example.first-plugin
 
 The command asks for the display name, author, and license, then creates `hello.lua` and `manifest.json`.
 The exact executable name or path depends on your installation.
+The generated manifest uses the running Slicer version as its minimum.
 
 For day-to-day development, copy or link the resulting bundle directory into the user plugin folder, edit it, and choose **Rescan Plugins**.
 Directory-based development does not require a signature.

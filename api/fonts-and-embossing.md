@@ -40,7 +40,7 @@ Numeric indexing and `#fonts` are supported.
 api.get_default_font() -> Font
 ```
 
-Returns PrusaSlicer's default font descriptor.
+Returns the first font in PrusaSlicer's favorite font list, which is also the fallback used by `api.get_font` and `api.emboss_text`.
 
 ```lua
 local font = api.get_default_font()
@@ -81,7 +81,7 @@ Turns text into an extruded mesh.
 
 ```lua
 {
-    font = Font,
+    font = Font?,
     text = string,
     line_height = number?,
     per_glyph = boolean?,
@@ -89,21 +89,21 @@ Turns text into an extruded mesh.
 }
 ```
 
-| Field         | Required | Default | Meaning                                                           |
-| ------------- | -------: | ------: | ----------------------------------------------------------------- |
-| `font`        |      Yes |    None | Font descriptor to use.                                           |
-| `text`        |      Yes |    None | Text to convert.                                                  |
-| `line_height` |       No |   10 mm | Requested line height.                                            |
-| `per_glyph`   |       No | `false` | Enables per-glyph projection behavior in the text shape provider. |
-| `depth`       |       No |    1 mm | Requested extrusion depth. Ignored in alpha11.                    |
+| Field         | Required | Default      | Meaning                                                           |
+| ------------- | -------: | ------------ | ----------------------------------------------------------------- |
+| `font`        |       No | Default font | Font descriptor to use.                                           |
+| `text`        |      Yes | None         | Text to convert.                                                  |
+| `line_height` |       No | 10 mm        | Requested line height.                                            |
+| `per_glyph`   |       No | `false`      | Enables per-glyph projection behavior in the text shape provider. |
+| `depth`       |       No | 1 mm         | Extrusion depth in millimeters.                                   |
 
-PrusaSlicer 3.0.0-alpha11 always creates text at 1 mm depth because the parser does not read `depth`.
-See [`emboss_text` ignores `depth`](../known-limitations.md#emboss_text-ignores-depth).
+Omitting `font` uses the same font as `api.get_default_font()`.
+`depth` controls the mesh extrusion depth.
 
 ```lua
 local label = api.emboss_text {
-    font = api.get_default_font(),
     text = "Sample A",
+    depth = 1.5,
     line_height = 8,
     per_glyph = false
 }

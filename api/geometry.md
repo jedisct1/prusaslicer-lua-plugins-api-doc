@@ -259,7 +259,7 @@ local bounds = model:bounds()
 local width = bounds.max_x - bounds.min_x
 ```
 
-In 3.0.0-alpha11, primitive constructors and `Mesh:translate` do not refresh the cached bounds.
+Primitive constructors and `Mesh:translate` do not refresh the cached bounds.
 Primitive bounds may be all zeroes, and bounds may stay stale after translation.
 See [Primitive mesh bounds are stale](../known-limitations.md#primitive-mesh-bounds-are-stale).
 

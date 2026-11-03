@@ -57,12 +57,13 @@ Do not call `require("api")`.
 
 ### Beds, settings, and hardware
 
-| Type                                                               | Members                                                                                        |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| [`BedInstRef`](configuration-and-hardware.md#bedinstref)           | `printer_config`, `printer_presets`, `print_presets`, `tool_print_presets`, `material_presets` |
-| [`ConfigBox`](configuration-and-hardware.md#configbox)             | `value`, `set`                                                                                 |
-| [`HwPrinterConfig`](configuration-and-hardware.md#hwprinterconfig) | `name`, `tool_count`, `tools`                                                                  |
-| [`HwToolConfig`](configuration-and-hardware.md#hwtoolconfig)       | `feature`, `nozzle_diameter`                                                                   |
+| Type                                                                   | Members                                                                                        |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`BedInstRef`](configuration-and-hardware.md#bedinstref)               | `printer_config`, `printer_presets`, `print_presets`, `tool_print_presets`, `material_presets` |
+| [`FloatOrPercentage`](configuration-and-hardware.md#floatorpercentage) | `is_percentage`, `get_abs_value`                                                               |
+| [`ConfigBox`](configuration-and-hardware.md#configbox)                 | `value`, `set`                                                                                 |
+| [`HwPrinterConfig`](configuration-and-hardware.md#hwprinterconfig)     | `name`, `tool_count`, `tools`                                                                  |
+| [`HwToolConfig`](configuration-and-hardware.md#hwtoolconfig)           | `feature`, `nozzle_diameter`                                                                   |
 
 ## Global `VolumeType`
 

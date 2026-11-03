@@ -111,7 +111,7 @@ There is no method to list keys, inspect a key's type, reset a value, or ask whe
 ### `ConfigBox:value`
 
 ```lua
-config:value(name) -> boolean|integer|number|string|nil|opaque value
+config:value(name) -> boolean|integer|number|string|FloatOrPercentage|nil|opaque value
 ```
 
 For supported settings, this returns the current value.
@@ -129,9 +129,11 @@ Directly usable return types are:
 - Optional integer, returned as an integer or `nil`
 - Number
 - String
+- [`FloatOrPercentage`](#floatorpercentage), for settings that accept a number or percentage
 
 Some complex setting values are returned as opaque values that Lua code cannot inspect.
-These include 2D vectors, percentages, and values that may be either a number or a percentage.
+These include 2D vectors and plain percentage values.
+Settings that accept either a number or a percentage instead return the inspectable `FloatOrPercentage` type.
 
 An unknown name raises this kind of error:
 
@@ -181,7 +183,7 @@ The setter does not currently support boolean, ordinary string, vector, or many 
 An unknown key does nothing.
 
 A known setting with an unsupported type keeps its stored value.
-If that setting is an override, alpha11 can still enable the override.
+If that setting is an override, the setter can still enable the override.
 An invalid enum string is written to the log and also leaves the stored value unchanged, but it has the same override-enabling side effect.
 `ConfigBox:set` returns no status for any of these cases.
 
@@ -198,6 +200,35 @@ assert(math.abs(actual - 0.24) < 1e-9, "Could not set layer_height")
 
 Compare floating-point values with a tolerance rather than exact equality.
 
+
+## `FloatOrPercentage`
+
+A setting that accepts either a number or a percentage returns this object from `ConfigBox:value`.
+It has no public constructor.
+
+```lua
+value.is_percentage -> boolean
+value:get_abs_value(ratio_over) -> number
+```
+
+`is_percentage` is a read-only property.
+`get_abs_value` returns a stored absolute number unchanged.
+For a percentage, it returns `percentage / 100 * ratio_over`.
+Supply the baseline appropriate to the setting; the method does not look it up automatically.
+
+For example, `first_layer_height` percentages are relative to the regular layer height:
+
+```lua
+local settings = api.project:current_bed():print_presets()
+local first = settings:value("first_layer_height")
+local layer_height = settings:value("layer_height")
+local first_height_mm = first:get_abs_value(layer_height)
+print("First layer height: " .. first_height_mm)
+print("Stored as a percentage: " .. tostring(first.is_percentage))
+```
+
+To write one of these settings, pass a number or string to `ConfigBox:set`, such as `0.2` or `"120%"`.
+The setter does not accept the returned `FloatOrPercentage` object directly.
 
 ## Finding configuration keys
 

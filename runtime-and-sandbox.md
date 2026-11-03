@@ -1,6 +1,7 @@
 # Runtime and sandbox
 
-PrusaSlicer plugins run as short, user-triggered commands.
+Project plugins run as short, user-triggered commands.
+Print mode plugins use a separate configuration evaluation path described below.
 Understanding the two-stage lifecycle prevents most loading problems.
 
 ## The lifecycle
@@ -65,6 +66,23 @@ Every invocation starts fresh.
 There are no other Lua callbacks.
 In particular, there is no load, unload, project-open, project-save, selection-change, slicing, timer, or shutdown callback.
 
+## Print mode evaluation
+
+A `print.print_mode` plugin is evaluated by the print mode configuration system rather than the Plugins menu dialog.
+Each evaluation creates a fresh restricted Lua state, rereads the entry script, and calls `execute(opts)`.
+The result must be a table of configuration overrides.
+See [Commands and parameters](commands-and-parameters.md) for the return format.
+
+The only API installed for this path is `api.config:value(key)`, which reads an available configuration input.
+Unknown keys raise an error.
+There is no `api.project`, geometry API, font API, `VolumeType`, or custom `require` on this path.
+The standard library restrictions below still apply.
+
+An optional `info.condition` expression is evaluated against printer values to determine compatibility.
+A condition evaluation error marks the mode incompatible and is logged.
+Errors from `execute`, or a result that is not a table, produce a print mode error and clear its override layer.
+No Execute Plugin undo snapshot is taken by this evaluation path.
+
 ## Lua version and available libraries
 
 Official dependency builds use Lua 5.4.8.
@@ -95,13 +113,13 @@ Using them on a string, number, function, or API userdata raises `Invalid metada
 
 ## Global values
 
-During execution, PrusaSlicer provides:
+During project plugin execution, PrusaSlicer provides:
 
 - `api`, the project plugin API table.
 - `api.project`, an object bound to the selected project.
 - `VolumeType`, the volume role constants.
 - The restricted `require` function.
-- The `BoundingBox`, `Mesh`, `ModelElement`, `ConfigBox`, `HwToolConfig`, `HwPrinterConfig`, `BedInstRef`, `Font`, and `ProjectApi` type tables.
+- The `BoundingBox`, `Mesh`, `ModelElement`, `ConfigBox`, `HwToolConfig`, `HwPrinterConfig`, `BedInstRef`, `Font`, `FloatOrPercentage`, and `ProjectApi` type tables.
 
 The API types have no public constructors.
 You get their values from API functions.
@@ -218,10 +236,11 @@ Runtime failures go through PrusaSlicer's application log.
 
 Syntax and metadata errors during scanning are logged and normally keep the affected command out of the menu.
 A top-level runtime error is different.
-If the file defines valid `info` and `execute` globals before the failing line, alpha11 may still register it.
+If the file defines valid `info` and `execute` globals before the failing line, PrusaSlicer may still register it.
 
-During a command run, alpha11 also continues to look up and call `execute` after a top-level runtime error.
-An error raised by `execute` itself is logged rather than shown in the parameter dialog.
+During a project command run, PrusaSlicer also continues to look up and call `execute` after a top-level runtime error.
+An error raised by `execute` propagates to the project command runner, which logs it rather than showing it in the parameter dialog.
+The plugin runner requests a scene render only after `execute` returns successfully.
 Keep entry files declarative at the top level and put working code inside `execute`.
 
 Use clear assertions around values that matter:

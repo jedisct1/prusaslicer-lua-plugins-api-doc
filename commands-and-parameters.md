@@ -1,6 +1,7 @@
 # Commands and parameters
 
-Each command is a `.lua` file with a global `info` table and a global `execute(opts)` function.
+Each plugin entry is a `.lua` file with a global `info` table and a global `execute(opts)` function.
+Use `project.plugin` for a command that changes the project and `print.print_mode` for a print mode that returns configuration overrides.
 
 ## The `info` table
 
@@ -27,13 +28,14 @@ info = {
 }
 ```
 
-| Field    |       Required | Meaning                                                                                                                               |
-| -------- | -------------: | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`     |            Yes | Local command ID. The bundle ID is added in front of it.                                                                              |
-| `type`   |            Yes | Must be exactly `project.plugin`.                                                                                                     |
-| `title`  |             No | Dialog title. The full command ID is used when this is missing.                                                                       |
-| `menu`   | Yes in alpha11 | Plugins menu path, split on `/`. The parser accepts a missing value, but this release has a crash risk when several commands omit it. |
-| `params` |             No | Array of parameter definitions shown in the Run dialog.                                                                               |
+| Field       | Required | Meaning                                                                                        |
+| ----------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `id`        | Yes      | Local command ID. The bundle ID is added in front of it.                                       |
+| `type`      | Yes      | `project.plugin` or `print.print_mode`.                                                        |
+| `title`     | No       | Display title. The full command ID is used when this is missing.                               |
+| `menu`      | No       | Plugins menu path for a project command, split on `/`. Print modes do not appear in this menu. |
+| `params`    | No       | Array of parameter definitions.                                                                |
+| `condition` | No       | Print mode compatibility expression as a string. See [Print modes](#print-modes).              |
 
 The full ID is `<bundle id>.<local command id>`.
 For example:
@@ -58,10 +60,7 @@ creates this path:
 Plugins > Calibration > Temperature tower
 ```
 
-When one command has no `menu`, PrusaSlicer normally uses the full command ID as its menu label.
-Always provide a non-empty `menu` in alpha11.
-Two or more commands without one can reach a broken conflict-handling path during registration.
-See [Several commands without a menu can crash registration](known-limitations.md#several-commands-without-a-menu-can-crash-registration).
+When a project command has no `menu`, PrusaSlicer uses its full command ID as the menu label.
 
 Avoid leading, trailing, or repeated `/` characters.
 The parser splits the string literally and does not clean up empty path parts.
@@ -82,15 +81,16 @@ Each item in `params` has this shape:
 }
 ```
 
-| Field     |        Required | Meaning                                                                          |
-| --------- | --------------: | -------------------------------------------------------------------------------- |
-| `name`    |             Yes | Unique key placed in the `opts` table. Names must not repeat within one command. |
-| `label`   |              No | Text shown beside the control. Defaults to `name`.                               |
-| `type`    |             Yes | One of `string`, `float`, `int`, or `bool`.                                      |
-| `default` | Yes in practice | Initial value. Always provide the matching Lua type.                             |
+| Field            | Required       | Meaning                                                                          |
+| ---------------- | -------------- | -------------------------------------------------------------------------------- |
+| `name`           | Yes            | Unique key placed in the `opts` table. Names must not repeat within one command. |
+| `label`          | No             | Text shown beside the control. Defaults to `name`.                               |
+| `type`           | Yes            | `string`, `float`, `int`, `bool`, `combobox`, or `font`.                         |
+| `default`        | No             | Initial value with the matching Lua type.                                        |
+| `allowed_values` | For `combobox` | Non-empty array of strings offered by the control.                               |
 
-The current parser still expects this field.
-Always include it.
+For project commands, omitted defaults give an empty string, `false`, or zero for scalar controls.
+Provide explicit defaults when the initial value matters.
 
 ### String
 
@@ -115,14 +115,40 @@ The value passed to `execute` is a Lua boolean.
 {name = "height", label = "Height", type = "float", default = 12.5}
 ```
 
-The intended behavior is an integer control for `int` and a decimal control for `float`.
-PrusaSlicer 3.0.0-alpha11 wires these two controls in reverse.
-At runtime, `float` rounds to an integer and `int` accepts and returns a decimal value.
-See [Numeric parameters are swapped](known-limitations.md#numeric-parameters-are-swapped).
+`int` uses an integer control and returns an integer.
+`float` uses a decimal control and returns a number.
 
-Any other type is unsupported and may make the dialog fail instead of showing a useful plugin error.
+### Combo box
 
-## `execute(opts)`
+```lua
+{
+    name = "shape",
+    label = "Shape",
+    type = "combobox",
+    allowed_values = {"Cube", "Cylinder"},
+    default = "Cube"
+}
+```
+
+The value passed to `execute` is the selected string, not an index.
+Use the exact type name `combobox`.
+Always supply at least one allowed value and choose a default from that list.
+
+### Font chooser
+
+```lua
+{name = "font", label = "Font", type = "font"}
+```
+
+For a project command, this control lists the fonts returned by PrusaSlicer's font manager.
+The selected value in `opts.font` is a `FontDescriptor` that can be passed directly to `api.emboss_text`.
+An optional string `default` can match a font name or font path.
+Without one, the dialog uses the application's default font.
+Font parameters are not supported by the print-mode parameter storage.
+
+Any parameter type other than the six listed above is unsupported and may make the dialog fail instead of showing a useful plugin error.
+
+## Project command `execute(opts)`
 
 PrusaSlicer calls this function after the user clicks Run:
 
@@ -157,6 +183,57 @@ Run calls `execute`; Cancel closes the dialog without running it.
 The last submitted values are remembered only for the most recently run command.
 They are kept in memory, cleared by a plugin rescan, and are not a persistent storage API.
 
+## Print modes
+
+A print mode uses `type = "print.print_mode"` and belongs to a bundle that declares `"print.print_mode": "1.0.0"` in `required_apis`.
+It is evaluated as part of preset configuration rather than from the Plugins menu.
+Its `execute(opts)` must return a table of overrides:
+
+```lua
+info = {
+    id = "sparse_infill",
+    type = "print.print_mode",
+    title = "Sparse infill",
+    params = {
+        {name = "density", label = "Infill percentage", type = "float", default = 10.0}
+    }
+}
+
+function execute(opts)
+    return {fill_density = opts.density}
+end
+```
+
+Use explicit scalar defaults for print-mode parameters.
+The evaluator uses the default value's type to accept supplied parameter values, with integer-to-float conversion allowed.
+An omitted `float` default falls back to an integer zero, so use a decimal default such as `10.0`.
+
+The print-mode runtime provides `api.config:value(key)` to read the input configuration.
+An unknown key raises an error.
+Scalar values use Lua booleans, numbers, strings, or `{x = ..., y = ...}` points; vector values become 1-based tables.
+Percentages and float-or-percentage inputs become numbers.
+The project geometry and preset mutation APIs are unavailable in this runtime.
+
+Return scalar values for ordinary override keys.
+For a per-slot key, a scalar applies to every material slot; a 1-based table applies only to the slots it names.
+For example, `filament_soluble = {[2] = true}` changes only slot 2.
+Return percentage overrides as numbers such as `fill_density = 10`, rather than strings such as `"10%"`.
+Only macro-overridable keys and supported scalar types are accepted.
+Unknown or non-macro keys, tables for ordinary keys, and unsupported configuration value types are logged and skipped.
+A value that cannot be converted to the expected scalar type can instead fail evaluation.
+If execution raises an error or returns something other than a table, the mode reports an error and its overrides are cleared.
+
+An optional `condition` uses the preset expression language, not Lua:
+
+```lua
+condition = "printer.tool_count > 1 or feeder.base_model =~ /.*MMU.*/"
+```
+
+It can read `printer.*`, `feeder.*`, and `sheet.*` variables.
+Without a condition, a mode is compatible with every printer.
+A condition that fails evaluation or does not return a boolean makes the mode incompatible.
+The project-command runner does not enforce this condition.
+
 ## Several commands in one bundle
 
 Put each command in its own entry file:
@@ -176,7 +253,7 @@ Every `.lua` file is evaluated during scanning.
 Helper modules without command metadata are skipped with an informational log message.
 This is expected.
 
-Do not call `require` at the top of an entry file.
+For project commands, do not call `require` at the top of an entry file.
 Call it inside `execute` so it runs only after the restricted module loader has been installed:
 
 ```lua
