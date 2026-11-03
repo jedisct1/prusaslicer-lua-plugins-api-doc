@@ -9,8 +9,10 @@ Print-mode plugins provide reversible configuration overrides through the Print 
 
 ## Version covered
 
-This reference was checked against PrusaSlicer [`3.0.0-alpha13`](https://github.com/prusa3d/PrusaSlicer/releases/tag/version_3.0.0-alpha13), tag `version_3.0.0-alpha13`, commit `ff3d6677cf`.
+This reference was checked against PrusaSlicer [`3.0.0-alpha13`](https://github.com/prusa3d/PrusaSlicer/releases/tag/version_3.0.0-alpha13).
+
 The plugin API is new and still changing.
+
 The [current limitations](known-limitations.md) page lists behavior that is especially likely to change.
 
 ## Start here
